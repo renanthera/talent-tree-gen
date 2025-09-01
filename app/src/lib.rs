@@ -4,26 +4,10 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
-use serde::{Deserialize, Serialize};
-// use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all(deserialize="camelCase"))]
-struct TraitTree {
-    trait_tree_id: i32,
-    class_id: i32,
-    spec_id: i32,
-    class_name: String,
-    spec_name: String,
-}
+pub mod trait_tree;
 
-async fn fetch_trait_trees() -> Result<Vec<TraitTree>, Error> {
-    Ok(reqwasm::http::Request::get("/talent-data/talents.json")
-        .send()
-        .await?
-       .json()
-    .await?)
-}
+use crate::trait_tree::TraitTreeDebug;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -45,32 +29,6 @@ pub fn App() -> impl IntoView {
     }
 }
 
-#[component]
-fn JsonTest() -> impl IntoView {
-    let ttdata = LocalResource::new(move || fetch_trait_trees());
-    view! {
-        <Transition fallback=|| view! { <div>"Loading..."</div> }>
-            <ul>
-                {move || Suspend::new(async move {
-                    ttdata
-                        .await
-                        .map(|tt_data| {
-                            tt_data
-                                .into_iter()
-                                .map(|tt| {
-                                    // view! { <li>{format!("{tt:?}")}</li> }
-                                    view! {
-                                        <li>{format!("{0} - {1}", tt.class_name, tt.spec_name)}</li>
-                                    }
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                })}
-            </ul>
-        </Transition>
-    }
-}
-
 /// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
@@ -79,7 +37,6 @@ fn HomePage() -> impl IntoView {
     let on_click = move |_| *count.write() += 1;
 
     let (name, set_name) = signal("".to_string());
-
 
     view! {
         <button on:click=on_click>"Click Me: " {count}</button>
@@ -92,6 +49,6 @@ fn HomePage() -> impl IntoView {
             prop:value=name
         />
         <p>"Name is: "{name}</p>
-        <JsonTest />
+        <TraitTreeDebug />
     }
 }
