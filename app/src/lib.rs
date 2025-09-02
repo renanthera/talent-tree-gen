@@ -5,20 +5,20 @@ use leptos_router::{
     StaticSegment,
 };
 
-pub mod trait_tree;
+mod talent_string;
+mod trait_tree;
 
+use crate::talent_string::TalentConfigView;
+use crate::talent_string::TalentConfiguration;
+use crate::talent_string::TalentParseError;
 use crate::trait_tree::TraitTreeDebug;
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
     view! {
-        // sets the document title
         <Title text="WoW Talent Tree Generator" />
-
-        // content for this welcome page
         <Router>
             <main>
                 <Routes fallback=|| "Page not found.".into_view()>
@@ -29,26 +29,19 @@ pub fn App() -> impl IntoView {
     }
 }
 
-/// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let count = RwSignal::new(0);
-    let on_click = move |_| *count.write() += 1;
-
-    let (name, set_name) = signal("".to_string());
+    let (talent_str, set_talent_str) =
+        signal::<Result<TalentConfiguration, TalentParseError>>(Err(TalentParseError::NoString));
 
     view! {
-        <button on:click=on_click>"Click Me: " {count}</button>
-        <br />
         <input
             type="text"
             on:input:target=move |v| {
-                set_name.set(v.target().value());
+                set_talent_str.set(v.target().value().parse());
             }
-            prop:value=name
         />
-        <p>"Name is: "{name}</p>
+        <TalentConfigView talent_config=talent_str />
         <TraitTreeDebug />
     }
 }

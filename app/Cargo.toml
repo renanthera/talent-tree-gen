@@ -14,6 +14,7 @@ reqwasm = "0.5.0"
 gloo-timers = { version = "0.3.0", features = ["futures"] }
 serde = "1.0.219"
 thiserror = "2.0.16"
+regex = "1.11.2"
 
 [features]
 default = ["csr"]
