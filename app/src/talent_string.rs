@@ -1,10 +1,11 @@
 use crate::trait_types::{
-    TalentConfiguration, TalentEncodingConfiguration, TalentEncodingError, TalentParseError,
-    Version,
+    ProductType, TalentConfiguration, TalentEncodingConfiguration, TalentEncodingError,
+    TalentParseError, Version,
 };
 use leptos::prelude::*;
 use regex::Regex;
 use std::str::FromStr;
+use leptos::leptos_dom::logging::console_log;
 
 impl TalentEncodingConfiguration {
     fn new(version: Version) -> Result<Self, TalentEncodingError> {
@@ -61,6 +62,34 @@ impl TalentEncodingConfiguration {
     }
 }
 
+impl std::fmt::Display for ProductType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ProductType::WOW => write!(f, "Live"),
+            ProductType::WOW_BETA => write!(f, "Beta"),
+            ProductType::WOWDEV => write!(f, "Alpha"),
+            ProductType::WOWT => write!(f, "PTR"),
+            ProductType::WOWXPTR => write!(f, "XPTR"),
+        }
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {}.{}.{}-{}",
+            self.product, self.major, self.patch, self.minor, self.build
+        )
+    }
+}
+
+impl std::fmt::Display for TalentEncodingConfiguration {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.version.fmt(f)
+    }
+}
+
 impl FromStr for TalentConfiguration {
     type Err = TalentParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -75,6 +104,8 @@ impl FromStr for TalentConfiguration {
                 let Some(char) = iter.peek() else {
                     return Ok(value);
                 };
+                console_log(&format!("{:?}",config.find_char(&char.to_string())));
+                console_log(&format!("{:?}",bit_head%config.byte_size));
                 value += (config.find_char(&char.to_string())? >> (bit_head % config.byte_size)
                     & 0b1)
                     << std::cmp::min(offset, 63);

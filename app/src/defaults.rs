@@ -1,13 +1,9 @@
-use crate::trait_types::{TalentEncodingConfiguration, Version};
+use crate::trait_types::{ProductType, TalentEncodingConfiguration, Version};
 use std::default::Default;
 
-impl Default for Version {
+impl Default for ProductType {
     fn default() -> Self {
-        Version {
-            major: 11,
-            patch: 2,
-            minor: 0,
-        }
+        ProductType::WOW
     }
 }
 
@@ -24,6 +20,18 @@ impl Default for TalentEncodingConfiguration {
             rank_bits: 6,
             choice_bits: 2,
             byte_size: 6,
+        }
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Version {
+            product: ProductType::default(),
+            major: 11,
+            patch: 2,
+            minor: 0,
+            build: 63003,
         }
     }
 }

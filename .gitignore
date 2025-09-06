@@ -8,3 +8,4 @@ pkg
 
 # don't commit talent-data to dev
 public/talent-data
+public/versions.json

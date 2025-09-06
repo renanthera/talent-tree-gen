@@ -5,16 +5,15 @@ use leptos_router::{
     StaticSegment,
 };
 
+use crate::talent_string::TalentConfigView;
+use crate::trait_tree::{fetch_trait_trees, TraitTreeDebug};
+use crate::trait_types::TalentEncodingConfiguration;
+use crate::trait_types::{TalentConfiguration, TalentParseError};
+
 mod defaults;
 mod talent_string;
 mod trait_tree;
 mod trait_types;
-
-use crate::trait_types::{TalentConfiguration, TalentParseError};
-
-use crate::talent_string::TalentConfigView;
-use crate::trait_tree::fetch_trait_trees;
-use crate::trait_tree::TraitTreeDebug;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -37,12 +36,23 @@ pub fn App() -> impl IntoView {
 2. load spec data for version x spec
 */
 
+pub async fn fetch_versions() -> Result<Vec<TalentEncodingConfiguration>, Error> {
+    Ok(reqwasm::http::Request::get("/versions.json")
+        .send()
+        .await?
+        .json()
+        .await?)
+}
+
 #[component]
 fn HomePage() -> impl IntoView {
     let (talent_str, set_talent_str) =
         signal::<Result<TalentConfiguration, TalentParseError>>(Err(TalentParseError::NoString));
 
-    let trait_tree_data = LocalResource::new(move || fetch_trait_trees());
+    let (selected_talent_encoding, set_selected_talent_encoding) =
+        signal(TalentEncodingConfiguration::default());
+
+    let version_data = LocalResource::new(move || fetch_versions());
 
     view! {
         <input
@@ -51,7 +61,28 @@ fn HomePage() -> impl IntoView {
                 set_talent_str.set(v.target().value().parse());
             }
         />
+        <select name="version">
+            <option value="default">
+                {move || format!("{0}", selected_talent_encoding.get())}
+            </option>
+            <Transition fallback=|| {
+                view! { <option>"Loading..."</option> }
+            }>
+                {move || Suspend::new(async move {
+                    version_data
+                        .await
+                        .map(|tt_data| {
+                            tt_data
+                                .into_iter()
+                                .map(|tt| {
+                                    view! { <option>{move || format!("{tt}")}</option> }
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                })}
+            </Transition>
+        </select>
         <TalentConfigView talent_config=talent_str />
-        <TraitTreeDebug />
+        // <TraitTreeDebug />
     }
 }

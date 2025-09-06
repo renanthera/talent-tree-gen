@@ -29,14 +29,26 @@ pub struct TalentConfiguration {
     pub spec: usize,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Version {
-    pub major: i32,
-    pub patch: i32,
-    pub minor: i32,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProductType {
+    WOW,
+    #[allow(non_camel_case_types)]
+    WOW_BETA,
+    WOWDEV,
+    WOWT,
+    WOWXPTR,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Version {
+    pub product: ProductType,
+    pub major: usize,
+    pub patch: usize,
+    pub minor: usize,
+    pub build: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TalentEncodingConfiguration {
     pub version: Version,
     pub base64_chars: String,
