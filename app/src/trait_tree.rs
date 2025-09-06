@@ -1,7 +1,45 @@
-use crate::trait_types::{TraitTree, TraitTreeNodeType};
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
-pub mod trait_tree_node_type_deserializer {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct TraitTree {
+    pub trait_tree_id: i32,
+    pub class_id: i32,
+    pub spec_id: i32,
+    pub class_name: String,
+    pub spec_name: String,
+    pub class_nodes: Vec<TraitTreeNode>,
+    pub spec_nodes: Vec<TraitTreeNode>,
+    pub hero_nodes: Vec<TraitTreeNode>,
+    pub sub_tree_nodes: Vec<TraitTreeNode>,
+    pub full_node_order: Vec<i32>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct TraitTreeNode {
+    pub id: i32,
+    pub pos_x: i32,
+    pub pos_y: i32,
+    pub max_ranks: Option<i32>,
+    pub name: String,
+    #[serde(
+        rename = "type",
+        deserialize_with = "trait_tree_node_type_deserializer::deserialize"
+    )]
+    pub node_type: TraitTreeNodeType,
+    pub entry_node: Option<bool>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TraitTreeNodeType {
+    Single,
+    Choice,
+    SubTree,
+}
+
+mod trait_tree_node_type_deserializer {
     use super::TraitTreeNodeType;
     use serde::de::{Error, Unexpected};
 

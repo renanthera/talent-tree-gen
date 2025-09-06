@@ -5,15 +5,13 @@ use leptos_router::{
     StaticSegment,
 };
 
-use crate::talent_string::TalentConfigView;
-use crate::trait_tree::{fetch_trait_trees, TraitTreeDebug};
-use crate::trait_types::TalentEncodingConfiguration;
-use crate::trait_types::{TalentConfiguration, TalentParseError};
+use crate::talent_encoding::TalentEncodingConfiguration;
+use crate::talent_configuration::{TalentConfigView, TalentConfiguration, TalentConfigurationError};
 
 mod defaults;
-mod talent_string;
+mod talent_encoding;
+mod talent_configuration;
 mod trait_tree;
-mod trait_types;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -47,7 +45,7 @@ pub async fn fetch_versions() -> Result<Vec<TalentEncodingConfiguration>, Error>
 #[component]
 fn HomePage() -> impl IntoView {
     let (talent_str, set_talent_str) =
-        signal::<Result<TalentConfiguration, TalentParseError>>(Err(TalentParseError::NoString));
+        signal::<Result<TalentConfiguration, TalentConfigurationError>>(Err(TalentConfigurationError::NoString));
 
     let (selected_talent_encoding, set_selected_talent_encoding) =
         signal(TalentEncodingConfiguration::default());
