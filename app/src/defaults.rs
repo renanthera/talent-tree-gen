@@ -1,5 +1,5 @@
+use crate::talent_encoding::{ProductType, TalentEncodingConfiguration, Version};
 use std::default::Default;
-use crate::talent_encoding::{ProductType, Version, TalentEncodingConfiguration};
 
 impl Default for ProductType {
     fn default() -> Self {

@@ -1,6 +1,6 @@
-use std::fmt;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]

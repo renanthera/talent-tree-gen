@@ -1,5 +1,5 @@
+use leptos::{leptos_dom::logging::console_log, prelude::*};
 use std::str::FromStr;
-use leptos::{prelude::*, leptos_dom::logging::console_log};
 use thiserror::Error;
 
 use crate::talent_encoding::{TalentEncodingConfiguration, TalentEncodingError, Version};
@@ -33,8 +33,8 @@ impl FromStr for TalentConfiguration {
                 let Some(char) = iter.peek() else {
                     return Ok(value);
                 };
-                console_log(&format!("{:?}",config.find_char(&char.to_string())));
-                console_log(&format!("{:?}",bit_head%config.byte_size));
+                console_log(&format!("{:?}", config.find_char(&char.to_string())));
+                console_log(&format!("{:?}", bit_head % config.byte_size));
                 value += (config.find_char(&char.to_string())? >> (bit_head % config.byte_size)
                     & 0b1)
                     << std::cmp::min(offset, 63);
