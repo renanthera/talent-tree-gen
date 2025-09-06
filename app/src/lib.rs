@@ -5,12 +5,15 @@ use leptos_router::{
     StaticSegment,
 };
 
+mod defaults;
 mod talent_string;
 mod trait_tree;
+mod trait_types;
+
+use crate::trait_types::{TalentConfiguration, TalentParseError};
 
 use crate::talent_string::TalentConfigView;
-use crate::talent_string::TalentConfiguration;
-use crate::talent_string::TalentParseError;
+use crate::trait_tree::fetch_trait_trees;
 use crate::trait_tree::TraitTreeDebug;
 
 #[component]
@@ -28,11 +31,18 @@ pub fn App() -> impl IntoView {
         </Router>
     }
 }
+/*
+1. use default version if no version is selected
+   - otherwise, load version data
+2. load spec data for version x spec
+*/
 
 #[component]
 fn HomePage() -> impl IntoView {
     let (talent_str, set_talent_str) =
         signal::<Result<TalentConfiguration, TalentParseError>>(Err(TalentParseError::NoString));
+
+    let trait_tree_data = LocalResource::new(move || fetch_trait_trees());
 
     view! {
         <input

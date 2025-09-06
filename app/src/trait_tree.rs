@@ -1,17 +1,28 @@
+use crate::trait_types::{TraitTree, TraitTreeNodeType};
 use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
-struct TraitTree {
-    trait_tree_id: i32,
-    class_id: i32,
-    spec_id: i32,
-    class_name: String,
-    spec_name: String,
+pub mod trait_tree_node_type_deserializer {
+    use super::TraitTreeNodeType;
+    use serde::de::{Error, Unexpected};
+
+    pub fn deserialize<'de, D>(de: D) -> Result<TraitTreeNodeType, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = serde::Deserialize::deserialize(de)?;
+        match s {
+            "single" => Ok(TraitTreeNodeType::Single),
+            "choice" => Ok(TraitTreeNodeType::Choice),
+            "subtree" => Ok(TraitTreeNodeType::SubTree),
+            _ => Err(D::Error::invalid_value(
+                Unexpected::Str(s),
+                &"single/choice/subtree",
+            )),
+        }
+    }
 }
 
-async fn fetch_trait_trees() -> Result<Vec<TraitTree>, Error> {
+pub async fn fetch_trait_trees() -> Result<Vec<TraitTree>, Error> {
     Ok(reqwasm::http::Request::get("/talent-data/talents.json")
         .send()
         .await?
@@ -32,10 +43,7 @@ pub fn TraitTreeDebug() -> impl IntoView {
                             tt_data
                                 .into_iter()
                                 .map(|tt| {
-                                    // view! { <li>{format!("{tt:?}")}</li> }
-                                    view! {
-                                        <li>{format!("{0} - {1}", tt.class_name, tt.spec_name)}</li>
-                                    }
+                                    view! { <li>{format!("{tt:?}")}</li> }
                                 })
                                 .collect::<Vec<_>>()
                         })

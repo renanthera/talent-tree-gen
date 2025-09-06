@@ -1,66 +1,23 @@
-use leptos::{leptos_dom::logging::console_log, prelude::*};
+use crate::trait_types::{
+    TalentConfiguration, TalentEncodingConfiguration, TalentEncodingError, TalentParseError,
+    Version,
+};
+use leptos::prelude::*;
 use regex::Regex;
-use std::fmt::Display;
 use std::str::FromStr;
-use thiserror::Error;
-
-#[derive(Error, Debug, Clone)]
-pub enum TalentParseError {
-    #[error(transparent)]
-    TalentEncodingError(#[from] TalentEncodingError),
-    #[error("Talent string is not valid base64")]
-    InvalidBase64,
-    #[error("No talent string")]
-    NoString,
-}
-
-#[derive(Error, Debug, Clone)]
-pub enum TalentEncodingError {
-    #[error("Version not found in database")]
-    VersionNotFound,
-}
-
-#[derive(Debug, Clone)]
-pub struct Talent {
-    id: i32,
-}
-
-#[derive(Debug, Clone)]
-pub struct TalentConfiguration {
-    pub str: String,
-    talents: Vec<Talent>,
-}
-
-#[derive(Debug)]
-struct Version {
-    major: i32,
-    patch: i32,
-    minor: i32,
-}
-
-#[derive(Debug)]
-struct TalentEncodingConfiguration {
-    version: Version,
-    base64_chars: String,
-    serialization_version: i32,
-    version_bits: usize,
-    spec_bits: usize,
-    tree_bits: usize,
-    rank_bits: usize,
-    choice_bits: usize,
-    byte_size: usize,
-}
 
 impl TalentEncodingConfiguration {
-    pub fn new(version: Version) -> Result<Self, TalentEncodingError> {
+    fn new(version: Version) -> Result<Self, TalentEncodingError> {
         match version {
-            Version {
-                major: 11,
-                patch: 2,
-                minor: 5,
-            } => Ok(TalentEncodingConfiguration::default()),
+            _ if version == Version::default() => Ok(TalentEncodingConfiguration::default()),
             _ => Err(TalentEncodingError::VersionNotFound),
         }
+    }
+
+    fn find_char(&self, c: &str) -> Result<usize, TalentEncodingError> {
+        self.base64_chars
+            .find(c)
+            .ok_or(TalentEncodingError::InvalidBase64Charset)
     }
 
     fn escaped_chars(&self) -> String {
@@ -68,80 +25,77 @@ impl TalentEncodingConfiguration {
         let unescaped_slash = Regex::new(r"[^\\]/").unwrap();
         while let Some(m) = unescaped_slash.find(rv.as_str()) {
             rv.insert(m.start() + 1, '\\');
-            console_log(&rv);
         }
         rv
     }
 
-    pub fn valid_base64(&self, string: &str) -> bool {
-        let match_str = format!(r"[^{}]", self.escaped_chars());
+    fn valid_base64(&self, string: &str) -> Result<(), TalentEncodingError> {
+        let match_str = format!(r"[^{}]+", self.escaped_chars());
         let re = Regex::new(match_str.as_str()).unwrap();
         match re.find(string) {
-            Some(_) => false,
-            None => true,
+            Some(_) => Err(TalentEncodingError::InvalidBase64Charset),
+            None => Ok(()),
         }
     }
-}
 
-impl Default for TalentConfiguration {
-    fn default() -> Self {
-        TalentConfiguration {
-            str: "".to_string(),
-            talents: Vec::new(),
+    fn valid_size(&self, string: &str) -> Result<(), TalentEncodingError> {
+        match self.version_bits + self.spec_bits + self.tree_bits <= string.len() * self.byte_size {
+            true => Ok(()),
+            false => Err(TalentEncodingError::StringTooShort),
         }
     }
-}
 
-impl Default for Version {
-    fn default() -> Self {
-        Version {
-            major: 11,
-            patch: 2,
-            minor: 5,
+    fn valid_version(&self, version: usize) -> Result<(), TalentEncodingError> {
+        match self.serialization_version == version {
+            true => Ok(()),
+            false => Err(TalentEncodingError::IncorrectSerializationVersion),
         }
     }
-}
 
-impl Default for TalentEncodingConfiguration {
-    fn default() -> Self {
-        TalentEncodingConfiguration {
-            version: Version::default(),
-            base64_chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-                .to_string(),
-            serialization_version: 2,
-            version_bits: 8,
-            spec_bits: 16,
-            tree_bits: 128,
-            rank_bits: 6,
-            choice_bits: 2,
-            byte_size: 6,
-        }
+    fn is_valid(&self, string: &str, version: usize) -> Result<(), TalentEncodingError> {
+        self.valid_base64(string)?;
+        self.valid_size(string)?;
+        self.valid_version(version)?;
+
+        Ok(())
     }
 }
 
 impl FromStr for TalentConfiguration {
     type Err = TalentParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config = TalentEncodingConfiguration::new(Version {
-            major: 11,
-            patch: 2,
-            minor: 5,
-        })?;
+        let config = TalentEncodingConfiguration::new(Version::default())?;
 
-        if !config.valid_base64(s) {
-            return Err(TalentParseError::InvalidBase64);
+        let mut bit_head: usize = 0;
+        let mut iter = s.chars().peekable();
+
+        let mut get_bits = |count: usize| -> Result<usize, TalentEncodingError> {
+            let mut value: usize = 0;
+            for offset in 0..count {
+                let Some(char) = iter.peek() else {
+                    return Ok(value);
+                };
+                value += (config.find_char(&char.to_string())? >> (bit_head % config.byte_size)
+                    & 0b1)
+                    << std::cmp::min(offset, 63);
+                bit_head += 1;
+                if bit_head % config.byte_size == 0 {
+                    iter.next();
+                }
+            }
+            Ok(value)
+        };
+
+        let serialization_version = get_bits(config.version_bits)?;
+        let _ = get_bits(config.tree_bits)?;
+        match config.is_valid(s, serialization_version) {
+            Ok(()) => Ok(Self {
+                string: s.to_string(),
+                serialization_version,
+                spec: get_bits(config.spec_bits)?,
+            }),
+            Err(err) => Err(TalentParseError::TalentEncodingError(err)),
         }
-
-        Ok(Self {
-            str: s.to_string(),
-            talents: Vec::new(),
-        })
-    }
-}
-
-impl Display for TalentConfiguration {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "TalentConfiguration {{ str: {} }}", self.str)
     }
 }
 
