@@ -8,12 +8,13 @@ use leptos_router::{
 use crate::talent_configuration::{
     TalentConfigView, TalentConfiguration, TalentConfigurationError,
 };
-use crate::talent_encoding::TalentEncodingConfiguration;
+use crate::version::VersionView;
 
 mod defaults;
 mod talent_configuration;
 mod talent_encoding;
 mod trait_tree;
+mod version;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -36,24 +37,11 @@ pub fn App() -> impl IntoView {
 2. load spec data for version x spec
 */
 
-pub async fn fetch_versions() -> Result<Vec<TalentEncodingConfiguration>, Error> {
-    Ok(reqwasm::http::Request::get("/versions.json")
-        .send()
-        .await?
-        .json()
-        .await?)
-}
-
 #[component]
 fn HomePage() -> impl IntoView {
     let (talent_str, set_talent_str) = signal::<
         Result<TalentConfiguration, TalentConfigurationError>,
     >(Err(TalentConfigurationError::NoString));
-
-    let (selected_talent_encoding, set_selected_talent_encoding) =
-        signal(TalentEncodingConfiguration::default());
-
-    let version_data = LocalResource::new(move || fetch_versions());
 
     view! {
         <input
@@ -62,27 +50,7 @@ fn HomePage() -> impl IntoView {
                 set_talent_str.set(v.target().value().parse());
             }
         />
-        <select name="version">
-            <option value="default">
-                {move || format!("{0}", selected_talent_encoding.get())}
-            </option>
-            <Transition fallback=|| {
-                view! { <option>"Loading..."</option> }
-            }>
-                {move || Suspend::new(async move {
-                    version_data
-                        .await
-                        .map(|tt_data| {
-                            tt_data
-                                .into_iter()
-                                .map(|tt| {
-                                    view! { <option>{move || format!("{tt}")}</option> }
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                })}
-            </Transition>
-        </select>
+        <VersionView />
         <TalentConfigView talent_config=talent_str />
     }
 }

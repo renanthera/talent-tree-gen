@@ -1,4 +1,5 @@
-use crate::talent_encoding::{ProductType, TalentEncodingConfiguration, Version};
+use crate::talent_encoding::TalentEncoding;
+use crate::version::{ProductType, Version};
 use std::default::Default;
 
 impl Default for ProductType {
@@ -7,9 +8,9 @@ impl Default for ProductType {
     }
 }
 
-impl Default for TalentEncodingConfiguration {
+impl Default for TalentEncoding {
     fn default() -> Self {
-        TalentEncodingConfiguration {
+        TalentEncoding {
             version: Version::default(),
             base64_chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
                 .to_string(),

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
+use crate::version::Version;
+
 #[derive(Error, Debug, Clone)]
 pub enum TalentEncodingError {
     #[error("Version not found in database")]
@@ -16,26 +18,7 @@ pub enum TalentEncodingError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ProductType {
-    WOW,
-    #[allow(non_camel_case_types)]
-    WOW_BETA,
-    WOWDEV,
-    WOWT,
-    WOWXPTR,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Version {
-    pub product: ProductType,
-    pub major: usize,
-    pub patch: usize,
-    pub minor: usize,
-    pub build: usize,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TalentEncodingConfiguration {
+pub struct TalentEncoding {
     pub version: Version,
     pub base64_chars: String,
     pub serialization_version: usize,
@@ -47,38 +30,16 @@ pub struct TalentEncodingConfiguration {
     pub byte_size: usize,
 }
 
-impl fmt::Display for ProductType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ProductType::WOW => write!(f, "Live"),
-            ProductType::WOW_BETA => write!(f, "Beta"),
-            ProductType::WOWDEV => write!(f, "Alpha"),
-            ProductType::WOWT => write!(f, "PTR"),
-            ProductType::WOWXPTR => write!(f, "XPTR"),
-        }
-    }
-}
-
-impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} {}.{}.{}-{}",
-            self.product, self.major, self.patch, self.minor, self.build
-        )
-    }
-}
-
-impl fmt::Display for TalentEncodingConfiguration {
+impl fmt::Display for TalentEncoding {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.version.fmt(f)
     }
 }
 
-impl TalentEncodingConfiguration {
+impl TalentEncoding {
     pub fn new(version: Version) -> Result<Self, TalentEncodingError> {
         match version {
-            _ if version == Version::default() => Ok(TalentEncodingConfiguration::default()),
+            _ if version == Version::default() => Ok(TalentEncoding::default()),
             _ => Err(TalentEncodingError::VersionNotFound),
         }
     }

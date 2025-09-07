@@ -2,7 +2,8 @@ use leptos::{leptos_dom::logging::console_log, prelude::*};
 use std::str::FromStr;
 use thiserror::Error;
 
-use crate::talent_encoding::{TalentEncodingConfiguration, TalentEncodingError, Version};
+use crate::talent_encoding::{TalentEncoding, TalentEncodingError};
+use crate::version::Version;
 
 #[derive(Error, Debug, Clone)]
 pub enum TalentConfigurationError {
@@ -22,7 +23,7 @@ pub struct TalentConfiguration {
 impl FromStr for TalentConfiguration {
     type Err = TalentConfigurationError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config = TalentEncodingConfiguration::new(Version::default())?;
+        let config = TalentEncoding::new(Version::default())?;
 
         let mut bit_head: usize = 0;
         let mut iter = s.chars().peekable();
