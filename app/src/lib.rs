@@ -8,6 +8,7 @@ use leptos_router::{
 use crate::talent_configuration::{
     TalentConfigView, TalentConfiguration, TalentConfigurationError,
 };
+use crate::talent_encoding::TalentEncoding;
 use crate::version::VersionView;
 
 mod defaults;
@@ -39,18 +40,12 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn HomePage() -> impl IntoView {
-    let (talent_str, set_talent_str) = signal::<
-        Result<TalentConfiguration, TalentConfigurationError>,
-    >(Err(TalentConfigurationError::NoString));
+    let (talent_encoding, set_talent_encoding) = signal(TalentEncoding::default());
+    provide_context(set_talent_encoding);
 
     view! {
-        <input
-            type="text"
-            on:input:target=move |v| {
-                set_talent_str.set(v.target().value().parse());
-            }
-        />
+        <div>{move || format!("{}", talent_encoding.get())}</div>
         <VersionView />
-        <TalentConfigView talent_config=talent_str />
+        <TalentConfigView talent_encoding />
     }
 }

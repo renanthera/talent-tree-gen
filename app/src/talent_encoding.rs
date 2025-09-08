@@ -7,8 +7,6 @@ use crate::version::Version;
 
 #[derive(Error, Debug, Clone)]
 pub enum TalentEncodingError {
-    #[error("Version not found in database")]
-    VersionNotFound,
     #[error("Talent string contains characters not permitted for encoding configuration")]
     InvalidBase64Charset,
     #[error("String too short")]
@@ -37,17 +35,14 @@ impl fmt::Display for TalentEncoding {
 }
 
 impl TalentEncoding {
-    pub fn new(version: Version) -> Result<Self, TalentEncodingError> {
-        match version {
-            _ if version == Version::default() => Ok(TalentEncoding::default()),
-            _ => Err(TalentEncodingError::VersionNotFound),
-        }
-    }
-
     pub fn find_char(&self, c: &str) -> Result<usize, TalentEncodingError> {
         self.base64_chars
             .find(c)
             .ok_or(TalentEncodingError::InvalidBase64Charset)
+    }
+
+    pub fn find_char_unchecked(&self, c: &str) -> usize {
+        self.base64_chars.find(c).unwrap()
     }
 
     fn escaped_chars(&self) -> String {

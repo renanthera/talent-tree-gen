@@ -59,8 +59,8 @@ async fn fetch_versions() -> Result<Vec<TalentEncoding>, Error> {
 
 #[component]
 pub fn VersionView() -> impl IntoView {
-    let (selected_talent_encoding, set_selected_talent_encoding) =
-        signal(TalentEncoding::default());
+    let set_selected_talent_encoding = use_context::<WriteSignal<TalentEncoding>>()
+        .expect("Must have a parent that provides a `WriteSignal<TalentEncoding>` context.");
 
     let version_data = LocalResource::new(move || fetch_versions());
 
