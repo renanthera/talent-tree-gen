@@ -9,6 +9,7 @@ use crate::talent_configuration::{
     TalentConfigView, TalentConfiguration, TalentConfigurationError,
 };
 use crate::talent_encoding::TalentEncoding;
+use crate::trait_tree::TraitTreeDebug;
 use crate::version::VersionView;
 
 mod defaults;
@@ -47,5 +48,6 @@ fn HomePage() -> impl IntoView {
         <div>{move || format!("{}", talent_encoding.get())}</div>
         <VersionView />
         <TalentConfigView talent_encoding />
+        <TraitTreeDebug />
     }
 }
