@@ -27,8 +27,9 @@ pub struct TalentEntry {
 pub struct TalentConfiguration {
     pub string: String,
     pub spec: usize,
-    pub talents_n: Vec<TalentEntry>,
-    pub talent_store: Vec<TraitTreeNode>,
+    pub selected_talents: Vec<TalentEntry>,
+    pub unselected_talents: Vec<TalentEntry>,
+    pub subtrees: Vec<usize>,
 }
 
 impl TalentConfiguration {
@@ -54,7 +55,7 @@ impl TalentConfiguration {
                     .unwrap_or(0)
                     & 0b1;
                 // use checked_shl to allow to shift into zero without panic
-                // try_into should not panic unless `usize` is somehow a very small type
+                // try_into should not panic unless `usize` is somehow a very small type on target platform
                 value += bit_index_set
                     .checked_shl(std::cmp::min(offset, 63).try_into().unwrap())
                     .unwrap_or(0);
@@ -84,18 +85,25 @@ impl TalentConfiguration {
         talent_entries.sort_by(|a, b| (&a.id).cmp(&b.id));
 
         // TODO: encode number of allotted TTN in data
-        let mut talents: Vec<TalentEntry> = Vec::with_capacity(80);
+        let mut selected_talents: Vec<TalentEntry> = Vec::with_capacity(80);
+        let mut unselected_talents: Vec<TalentEntry> = Vec::with_capacity(80);
+        let mut subtrees: Vec<usize> = Vec::with_capacity(2);
 
         // TODO: when i have my own data format, no longer depend on node order vec
         // and get rid of all of this unwrap
+        let mut skip: bool = false;
         for entry in trait_tree.full_node_order {
+            let selected_node_option = talent_entries.iter().find(|ttn| ttn.id == entry);
+            if selected_node_option.is_none() {
+                skip = true;
+            }
+            let selected_node = selected_node_option
+                .cloned()
+                .unwrap_or(TraitTreeNode::default());
             if get_bits(1) == 1 {
                 // entry is selected
-                let selected_node = talent_entries.iter().find(|ttn| ttn.id == entry).unwrap();
-                // console_log(&format!("{:?}", selected_node));
                 let mut selected_trait = selected_node.entries.first().unwrap();
                 let mut rank: usize = selected_node.max_ranks.unwrap_or(1);
-                let mut skip: bool = false;
 
                 if selected_trait.node_type == Some(TraitTreeEntryType::SubTree) {
                     skip = true;
@@ -112,27 +120,44 @@ impl TalentConfiguration {
                     if get_bits(1) == 1 {
                         // choice
                         let choice_bits = get_bits(config.choice_bits);
-                        console_log(&format!("{:?}", choice_bits));
-                        console_log(&format!("{:?}", selected_node.entries));
                         selected_trait = &selected_node.entries[choice_bits];
+
+                        if selected_trait.node_type == Some(TraitTreeEntryType::SubTree) {
+                            console_log(&format!("{:?}", selected_trait.trait_sub_tree_id));
+                            subtrees.push(
+                                selected_trait.trait_sub_tree_id.expect(
+                                    "A SubTree selection node does not have a trait_tree_id!",
+                                ),
+                            );
+                        }
                     }
                 }
                 if !skip {
-                    talents.push(TalentEntry {
+                    selected_talents.push(TalentEntry {
                         trait_tree_entry: selected_trait.clone(),
                         trait_tree_node: selected_node.clone(),
                         rank,
                     });
                 }
+            } else {
+                if !skip {
+                    unselected_talents.push(TalentEntry {
+                        trait_tree_node: selected_node.clone(),
+                        trait_tree_entry: Default::default(),
+                        rank: 0,
+                    });
+                }
             }
+            skip = false;
         }
 
         match config.is_valid(s, serialization_version) {
             Ok(()) => Ok(Self {
                 string: s.to_string(),
                 spec,
-                talents_n: talents,
-                talent_store: talent_entries,
+                selected_talents,
+                unselected_talents,
+                subtrees,
             }),
             Err(err) => Err(TalentConfigurationError::TalentEncodingError(err)),
         }
@@ -143,10 +168,23 @@ impl TalentConfiguration {
 pub fn DrawTalentConfigView(
     configuration: Memo<Result<TalentConfiguration, TalentConfigurationError>>,
 ) -> impl IntoView {
-    let draw_node = |node: TraitTreeNode, color: &str| {
-        let cx = node.pos_x / 25;
-        let cy = node.pos_y / 25;
-        view! { <circle cx=cx cy=cy r=5 fill=color /> }.into_any()
+    let draw_nodes = |subtrees: &Vec<usize>, nodes: Vec<TalentEntry>, color: &str| {
+        let draw_node = |node: &TalentEntry| {
+            let node = &node.trait_tree_node;
+            let cx = node.pos_x / 25;
+            let cy = node.pos_y / 25;
+            view! { <circle cx=cx cy=cy r=5 fill=color /> }.into_any()
+        };
+        nodes
+            .iter()
+            .map(|entry| match entry.trait_tree_entry.trait_sub_tree_id {
+                Some(tst_id) => match subtrees.contains(&tst_id) {
+                    true => draw_node(entry),
+                    false => view! {}.into_any(),
+                },
+                None => draw_node(entry),
+            })
+            .collect::<Vec<_>>()
     };
     view! {
         <div>
@@ -156,19 +194,16 @@ pub fn DrawTalentConfigView(
                 <svg view_box="0 0 1000 500" height=500 width=1000>
                     {move || match configuration.get() {
                         Ok(config) => {
-                            let mut u = config
-                                .talent_store
-                                .into_iter()
-                                .map(|talent_entry| draw_node(talent_entry, "red"))
-                                .collect::<Vec<_>>();
-                            let mut v = config
-                                .talents_n
-                                .into_iter()
-                                .map(|talent_entry| draw_node(
-                                    talent_entry.trait_tree_node,
-                                    "green",
-                                ))
-                                .collect::<Vec<_>>();
+                            let mut u = draw_nodes(
+                                &config.subtrees,
+                                config.unselected_talents,
+                                "red",
+                            );
+                            let mut v = draw_nodes(
+                                &config.subtrees,
+                                config.selected_talents,
+                                "green",
+                            );
                             u.extend(v);
                             u
                         }
@@ -189,7 +224,11 @@ pub fn TalentConfigView(talent_encoding: ReadSignal<TalentEncoding>) -> impl Int
     let fallback = || view! { <div>"Loading..."</div> };
 
     view! {
-        <input type="text" on:input:target=move |tag| set_talent_str.set(tag.target().value()) />
+        <input
+            type="text"
+            on:input:target=move |tag| set_talent_str.set(tag.target().value())
+            value=talent_str
+        />
         <Transition fallback>
             {move || Suspend::new(async move {
                 trait_tree_data

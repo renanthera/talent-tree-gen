@@ -31,6 +31,7 @@ pub struct TraitTreeEntry {
     pub name: Option<String>,
     pub spell_id: Option<usize>,
     pub index: Option<usize>,
+    pub trait_sub_tree_id: Option<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,6 +51,38 @@ pub struct TraitTreeNode {
     pub next: Vec<usize>,
     pub prev: Vec<usize>,
     pub entries: Vec<TraitTreeEntry>,
+}
+
+impl Default for TraitTreeEntry {
+    fn default() -> Self {
+        Self {
+            id: None,
+            definition_id: None,
+            max_ranks: None,
+            node_type: None,
+            name: None,
+            spell_id: None,
+            index: None,
+            trait_sub_tree_id: None,
+        }
+    }
+}
+
+impl Default for TraitTreeNode {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            pos_x: 0,
+            pos_y: 0,
+            max_ranks: None,
+            name: "".to_string(),
+            node_type: TraitTreeNodeType::Single,
+            entry_node: None,
+            next: Default::default(),
+            prev: Default::default(),
+            entries: Default::default(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
