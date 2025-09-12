@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::version::Version;
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum TalentEncodingError {
     #[error("Talent string contains characters not permitted for encoding configuration")]
     InvalidBase64Charset,
