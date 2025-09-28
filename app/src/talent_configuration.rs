@@ -1,4 +1,6 @@
-use leptos::{leptos_dom::logging::console_log, prelude::*};
+use leptos::{html, leptos_dom::logging::console_log, prelude::*, svg};
+use thaw::ConfigProvider;
+use thaw::{Tooltip, TooltipAppearance};
 use thiserror::Error;
 
 use crate::talent_encoding::{TalentEncoding, TalentEncodingError};
@@ -95,14 +97,20 @@ impl TalentConfiguration {
         for entry in trait_tree.full_node_order {
             let selected_node_option = talent_entries.iter().find(|ttn| ttn.id == entry);
             if selected_node_option.is_none() {
+                // console_log(&format!("{entry}"));
                 skip = true;
             }
+            // console_log(&format!("{:?}", selected_node_option));
             let selected_node = selected_node_option
                 .cloned()
                 .unwrap_or(TraitTreeNode::default());
             if get_bits(1) == 1 {
                 // entry is selected
-                let mut selected_trait = selected_node.entries.first().unwrap();
+                // console_log(&format!("{}-{}", selected_node.id, selected_node.name));
+                let mut selected_trait: &TraitTreeEntry = &Default::default();
+                if skip == false {
+                    selected_trait = selected_node.entries.first().unwrap();
+                }
                 let mut rank: usize = selected_node.max_ranks.unwrap_or(1);
 
                 if selected_trait.node_type == Some(TraitTreeEntryType::SubTree) {
@@ -123,7 +131,7 @@ impl TalentConfiguration {
                         selected_trait = &selected_node.entries[choice_bits];
 
                         if selected_trait.node_type == Some(TraitTreeEntryType::SubTree) {
-                            console_log(&format!("{:?}", selected_trait.trait_sub_tree_id));
+                            // console_log(&format!("{:?}\n{:?}", selected_node, selected_trait));
                             subtrees.push(
                                 selected_trait.trait_sub_tree_id.expect(
                                     "A SubTree selection node does not have a trait_tree_id!",
@@ -151,6 +159,8 @@ impl TalentConfiguration {
             skip = false;
         }
 
+        console_log(&format!("{:?}", subtrees));
+
         match config.is_valid(s, serialization_version) {
             Ok(()) => Ok(Self {
                 string: s.to_string(),
@@ -168,16 +178,26 @@ impl TalentConfiguration {
 pub fn DrawTalentConfigView(
     configuration: Memo<Result<TalentConfiguration, TalentConfigurationError>>,
 ) -> impl IntoView {
-    let draw_nodes = |subtrees: &Vec<usize>, nodes: Vec<TalentEntry>, color: &str| {
+    let draw_nodes = |subtrees: &Vec<usize>, nodes: Vec<TalentEntry>, color: &'static str| {
         let draw_node = |node: &TalentEntry| {
-            let node = &node.trait_tree_node;
-            let cx = node.pos_x / 25;
-            let cy = node.pos_y / 25;
-            view! { <circle cx=cx cy=cy r=5 fill=color /> }.into_any()
+            let cx = node.trait_tree_node.pos_x / 15;
+            let cy = node.trait_tree_node.pos_y / 15;
+            let name = match &node.trait_tree_entry.name {
+                Some(n) => n.to_string(),
+                None => node.trait_tree_node.name.to_string(),
+            };
+            let id = node.trait_tree_node.id.to_string();
+
+            view! {
+                <Tooltip content=name appearance=TooltipAppearance::Normal>
+                    <circle cx=cx cy=cy r=10 fill=color title=id />
+                </Tooltip>
+            }
+            .into_any()
         };
         nodes
             .iter()
-            .map(|entry| match entry.trait_tree_entry.trait_sub_tree_id {
+            .map(|entry| match entry.trait_tree_node.trait_sub_tree_id {
                 Some(tst_id) => match subtrees.contains(&tst_id) {
                     true => draw_node(entry),
                     false => view! {}.into_any(),
@@ -191,7 +211,7 @@ pub fn DrawTalentConfigView(
             <ErrorBoundary fallback=move |_| {
                 view! { <div>{format!("{:?}", configuration.get())}</div> }
             }>
-                <svg view_box="0 0 1000 500" height=500 width=1000>
+                <svg view_box="0 0 1500 500" height=500 width=1500>
                     {move || match configuration.get() {
                         Ok(config) => {
                             let mut u = draw_nodes(

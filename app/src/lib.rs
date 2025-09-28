@@ -4,6 +4,7 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
+use thaw::ConfigProvider;
 
 use crate::talent_configuration::{
     TalentConfigView, TalentConfiguration, TalentConfigurationError,
@@ -45,9 +46,11 @@ fn HomePage() -> impl IntoView {
     provide_context(set_talent_encoding);
 
     view! {
-        <div>{move || format!("{}", talent_encoding.get())}</div>
-        <VersionView />
-        <TalentConfigView talent_encoding />
-        <TraitTreeDebug />
+        <ConfigProvider>
+            <div>{move || format!("{}", talent_encoding.get())}</div>
+            <VersionView />
+            <TalentConfigView talent_encoding />
+            <TraitTreeDebug />
+        </ConfigProvider>
     }
 }
