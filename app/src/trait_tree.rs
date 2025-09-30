@@ -1,5 +1,46 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
+/*
+ * Custom Trait Tree Data Format:
+
+pre-scale positions
+pre-normalize hero talent positions
+pre-calculate line segments end points?
+
+struct TraitTree {
+  class_id?,
+  spec_id,
+  class_name,
+  spec_name,
+  nodes, // ordered by node_order
+}
+
+struct TraitNode {
+  id?,
+  spell_id?,
+  name,
+  max_ranks?, # just put on entry
+  node_type, # single, choice, subtree
+  node_source, # class, spec, hero
+  trait_sub_tree_id,
+  position, # x,y coords
+  entry_node, # start of tree
+  free_node, # free allocation
+  node_tier, # row info
+  next, # nodes below
+  entries, # trait_entries
+}
+
+struct TraitEntry {
+  id,
+  definition_id?,
+  index?,
+  spell_id?,
+  max_ranks,
+  name,
+}
+
+ */
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]

@@ -31,6 +31,7 @@ pub struct TalentConfiguration {
     pub unselected_talents: Vec<TalentEntry>,
     pub all_talents: Vec<TalentEntry>,
     pub subtrees: Vec<usize>,
+    pub trait_tree: TraitTree,
 }
 
 impl TalentConfiguration {
@@ -78,10 +79,11 @@ impl TalentConfiguration {
 
         let mut talent_entries = trait_tree
             .class_nodes
+            .clone()
             .into_iter()
-            .chain(trait_tree.spec_nodes.into_iter())
-            .chain(trait_tree.hero_nodes.into_iter())
-            .chain(trait_tree.sub_tree_nodes.into_iter())
+            .chain(trait_tree.spec_nodes.clone().into_iter())
+            .chain(trait_tree.hero_nodes.clone().into_iter())
+            .chain(trait_tree.sub_tree_nodes.clone().into_iter())
             .collect::<Vec<_>>();
         talent_entries.sort_by(|a, b| (&a.id).cmp(&b.id));
 
@@ -93,9 +95,9 @@ impl TalentConfiguration {
 
         // TODO: when i have my own data format, no longer depend on node order vec
         // and get rid of all of this unwrap
-        for entry in trait_tree.full_node_order {
+        for entry in trait_tree.full_node_order.iter() {
             let mut skip: bool = false;
-            let selected_node = match talent_entries.iter().find(|ttn| ttn.id == entry) {
+            let selected_node = match talent_entries.iter().find(|ttn| ttn.id == *entry) {
                 Some(node) => node.clone(),
                 None => {
                     skip = true;
@@ -163,8 +165,6 @@ impl TalentConfiguration {
             });
         }
 
-        console_log(&format!("{:?}", subtrees));
-
         match config.is_valid(s, serialization_version) {
             Ok(()) => Ok(Self {
                 string: s.to_string(),
@@ -173,16 +173,105 @@ impl TalentConfiguration {
                 unselected_talents,
                 all_talents,
                 subtrees,
+                trait_tree: trait_tree,
             }),
             Err(err) => Err(TalentConfigurationError::TalentEncodingError(err)),
         }
     }
 
+    fn compute_hero_talent_normalization(&self) -> (i32, i32) {
+        // TODO: bake this into data
+        let class_x_max = self
+            .trait_tree
+            .class_nodes
+            .iter()
+            .map(|entry| entry.pos_x)
+            .max()
+            .unwrap_or(0);
+
+        let spec_x_min = self
+            .trait_tree
+            .spec_nodes
+            .iter()
+            .map(|entry| entry.pos_x)
+            .min()
+            .unwrap_or(100);
+
+        let class_y_min = self
+            .trait_tree
+            .class_nodes
+            .iter()
+            .map(|entry| entry.pos_y)
+            .min()
+            .unwrap_or(0);
+
+        let class_y_max = self
+            .trait_tree
+            .class_nodes
+            .iter()
+            .map(|entry| entry.pos_y)
+            .max()
+            .unwrap_or(100);
+
+        let hero_y_min = self
+            .trait_tree
+            .hero_nodes
+            .iter()
+            .map(|entry| entry.pos_y)
+            .min()
+            .unwrap_or(0);
+
+        let hero_y_max = self
+            .trait_tree
+            .hero_nodes
+            .iter()
+            .map(|entry| entry.pos_y)
+            .max()
+            .unwrap_or(100);
+
+        let entry = self
+            .trait_tree
+            .hero_nodes
+            .iter()
+            .find(|entry| match entry.entry_node {
+                Some(true) => self
+                    .subtrees
+                    .contains(&entry.trait_sub_tree_id.unwrap_or(0)),
+                _ => false,
+            })
+            .unwrap();
+
+        let (root_x, root_y) = (entry.pos_x, entry.pos_y);
+
+        let (rv_x, rv_y) = (
+            (class_x_max + spec_x_min) / 2 - root_x,
+            (class_y_min + class_y_max) / 2 - (hero_y_max - hero_y_min) / 4 - root_y,
+        );
+
+        (rv_x, rv_y)
+    }
+
+    fn scale(&self, x: i32, y: i32) -> (i32, i32) {
+        // TODO: bake this into data
+        const SCALE_FACTOR: i32 = 15;
+
+        (x / SCALE_FACTOR, y / SCALE_FACTOR)
+    }
+
     fn coordinate_transformation(&self, entry: &TalentEntry) -> (i32, i32) {
-        (
-            entry.trait_tree_node.pos_x / 15,
-            entry.trait_tree_node.pos_y / 15,
-        )
+        // TODO: bake this into data
+        let (x_offset, y_offset) = match entry.trait_tree_node.trait_sub_tree_id {
+            Some(_) => self.compute_hero_talent_normalization(),
+            None => (0, 0),
+        };
+
+        match entry.trait_tree_node.trait_sub_tree_id {
+            Some(_) => self.scale(
+                entry.trait_tree_node.pos_x + x_offset,
+                entry.trait_tree_node.pos_y + y_offset,
+            ),
+            None => self.scale(entry.trait_tree_node.pos_x, entry.trait_tree_node.pos_y),
+        }
     }
 
     fn do_draw(&self, node: &TalentEntry) -> bool {
@@ -328,10 +417,7 @@ pub fn TalentConfigView(talent_encoding: ReadSignal<TalentEncoding>) -> impl Int
                                 trait_trees.clone(),
                             )
                         });
-                        view! {
-                            <DrawTalentConfigView configuration=talent_configuration />
-                            <div>{move || { format!("{0:?}", talent_configuration.get()) }}</div>
-                        }
+                        view! { <DrawTalentConfigView configuration=talent_configuration /> }
                     })
             })}
         </Transition>

@@ -35,11 +35,11 @@ impl fmt::Display for TalentEncoding {
 }
 
 impl TalentEncoding {
-    pub fn find_char(&self, c: &str) -> Result<usize, TalentEncodingError> {
-        self.base64_chars
-            .find(c)
-            .ok_or(TalentEncodingError::InvalidBase64Charset)
-    }
+    // pub fn find_char(&self, c: &str) -> Result<usize, TalentEncodingError> {
+    //     self.base64_chars
+    //         .find(c)
+    //         .ok_or(TalentEncodingError::InvalidBase64Charset)
+    // }
 
     pub fn find_char_unchecked(&self, c: &str) -> usize {
         self.base64_chars.find(c).unwrap()
