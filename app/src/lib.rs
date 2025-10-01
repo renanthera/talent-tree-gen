@@ -6,10 +6,12 @@ use leptos_router::{
 };
 use thaw::ConfigProvider;
 
+use crate::configuration_generation::TalentConfigurationGeneration;
 use crate::talent_configuration::TalentConfigView;
 use crate::talent_encoding::TalentEncoding;
 use crate::version::VersionView;
 
+mod configuration_generation;
 mod defaults;
 mod talent_configuration;
 mod talent_encoding;
@@ -47,6 +49,7 @@ fn HomePage() -> impl IntoView {
             <div>{move || format!("{}", talent_encoding.get())}</div>
             <VersionView />
             <TalentConfigView talent_encoding />
+            <TalentConfigurationGeneration talent_encoding />
         </ConfigProvider>
     }
 }

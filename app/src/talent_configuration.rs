@@ -27,6 +27,7 @@ pub struct TalentEntry {
 pub struct TalentConfiguration {
     pub string: String,
     pub spec: usize,
+    // TODO: use hash_map instead of vec?
     pub selected_talents: Vec<TalentEntry>,
     pub unselected_talents: Vec<TalentEntry>,
     pub all_talents: Vec<TalentEntry>,
@@ -35,7 +36,7 @@ pub struct TalentConfiguration {
 }
 
 impl TalentConfiguration {
-    fn new(
+    pub fn new_from_str(
         s: &str,
         config: TalentEncoding,
         trait_tree_data: Vec<TraitTree>,
@@ -173,10 +174,44 @@ impl TalentConfiguration {
                 unselected_talents,
                 all_talents,
                 subtrees,
-                trait_tree: trait_tree,
+                trait_tree,
             }),
             Err(err) => Err(TalentConfigurationError::TalentEncodingError(err)),
         }
+    }
+
+    pub fn new(
+        config: TalentEncoding,
+        trait_tree_data: Vec<TraitTree>,
+    ) -> Result<Self, TalentConfigurationError> {
+        let Some(trait_tree) = trait_tree_data
+            .iter()
+            .find(|trait_tree| trait_tree.spec_id == 268)
+        else {
+            panic!()
+        };
+        let unselected_talents = trait_tree
+            .class_nodes
+            .iter()
+            .chain(trait_tree.spec_nodes.clone().iter())
+            .chain(trait_tree.hero_nodes.clone().iter())
+            .chain(trait_tree.sub_tree_nodes.clone().iter())
+            .map(|node| TalentEntry {
+                trait_tree_node: node.clone(),
+                rank: 0,
+                trait_tree_entry: Default::default(),
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Self {
+            string: "".to_string(),
+            spec: trait_tree.spec_id,
+            all_talents: unselected_talents.clone(),
+            unselected_talents,
+            selected_talents: Default::default(),
+            subtrees: Default::default(),
+            trait_tree: trait_tree.clone(),
+        })
     }
 
     fn compute_hero_talent_normalization(&self) -> (i32, i32) {
@@ -311,9 +346,10 @@ impl TalentConfiguration {
             _ => "green",
         };
 
+        // TODO: unique ids even if multiple talent trees of the same spec are rendered
         Either::Left(view! {
             <Tooltip content=name appearance=TooltipAppearance::Normal>
-                <circle cx=cx cy=cy r=10 fill=color title=id />
+                <circle cx=cx cy=cy r=10 fill=color id=id />
             </Tooltip>
         })
     }
@@ -368,21 +404,21 @@ impl TalentConfiguration {
 
 #[component]
 pub fn DrawTalentConfigView(
-    configuration: Memo<Result<TalentConfiguration, TalentConfigurationError>>,
+    talent_configuration: Memo<Result<TalentConfiguration, TalentConfigurationError>>,
 ) -> impl IntoView {
     let fallback = move |_| {
-        view! { <div>{format!("{:?}", configuration.get())}</div> }
+        view! { <div>{format!("{:?}", talent_configuration.get())}</div> }
     };
 
     view! {
         <div>
             <ErrorBoundary fallback>
                 {move || {
-                    configuration
+                    talent_configuration
                         .with(|config| {
                             match config {
                                 Ok(conf) => Either::Left(conf.draw()),
-                                Err(_) => Either::Right(view! {}),
+                                Err(e) => Either::Right(view! { {format!("{:?}", e)} }),
                             }
                         })
                 }}
@@ -411,13 +447,13 @@ pub fn TalentConfigView(talent_encoding: ReadSignal<TalentEncoding>) -> impl Int
                     .await
                     .map(|trait_trees| {
                         let talent_configuration = Memo::new(move |_| {
-                            TalentConfiguration::new(
+                            TalentConfiguration::new_from_str(
                                 &talent_str.get(),
                                 talent_encoding.get(),
                                 trait_trees.clone(),
                             )
                         });
-                        view! { <DrawTalentConfigView configuration=talent_configuration /> }
+                        view! { <DrawTalentConfigView talent_configuration /> }
                     })
             })}
         </Transition>

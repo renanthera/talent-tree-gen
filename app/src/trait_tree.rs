@@ -94,6 +94,7 @@ pub struct TraitTreeNode {
     pub entries: Vec<TraitTreeEntry>,
     #[serde(alias = "subTreeId")]
     pub trait_sub_tree_id: Option<usize>,
+    pub req_points: Option<usize>,
 }
 
 impl Default for TraitTreeEntry {
@@ -125,6 +126,7 @@ impl Default for TraitTreeNode {
             prev: Default::default(),
             entries: Default::default(),
             trait_sub_tree_id: Default::default(),
+            req_points: None,
         }
     }
 }
